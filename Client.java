@@ -24,16 +24,19 @@ public class Client {
 
     protected String getServerAddress() {
         // ввод адреса сервера у пользователя и вернуть введенное значение.
+        ConsoleHelper.writeMessage("Введите адрес сервера:");
         return ConsoleHelper.readString();
     }
 
     protected int getServerPort() {
         // ввод порта сервера и возвращать его.
+        ConsoleHelper.writeMessage("Введите порт сервера:");
         return ConsoleHelper.readInt();
     }
 
     protected String getUserName() {
         //должен запрашивать и возвращать имя пользователя.
+        ConsoleHelper.writeMessage("Введите ваше имя:");
         return ConsoleHelper.readString();
     }
 
@@ -90,6 +93,20 @@ public class Client {
 
     public class SocketThread extends Thread {
         //класс отвечает за поток, который устанавливает сокетное соединение и читает сообщения сервера
+
+        @Override
+        public void run() {
+            try {
+                //создаем соединение с сервером
+                connection = new Connection(new Socket(getServerAddress(), getServerPort()));
+
+                clientHandshake();
+                clientMainLoop();
+            } catch (IOException | ClassNotFoundException e) {
+                notifyConnectionStatusChanged(false);
+            }
+        }
+
         protected void processIncomingMessage(String message) {
             //выводит текст message в консоль
             ConsoleHelper.writeMessage(message);
@@ -121,7 +138,7 @@ public class Client {
                     connection.send(new Message(MessageType.USER_NAME, userName)); //отправляем сообщение серверу об имени
                 } else if (message.getType() == MessageType.NAME_ACCEPTED) { //если сервер указал что имя принято
                     notifyConnectionStatusChanged(true); //сообщаем главному потоку о готовности начать работу
-                   return;
+                    return;
 
                 } else { //если сообщение не двух объявленных типов
                     throw new IOException("Unexpected MessageType");
@@ -146,19 +163,7 @@ public class Client {
             }
         }
 
-        @Override
-        public void run() {
-            String serverAddress = getServerAddress(); //запрос адреса сервера
-            int serverPort = getServerPort(); //запрос порта сервера
-            try {
-                Socket socket = new Socket(serverAddress, serverPort);
-                connection = new Connection(socket);
-                clientHandshake();
-                clientMainLoop();
-            } catch (IOException | ClassNotFoundException e) {
-                notifyConnectionStatusChanged(false);
-            }
-        }
+
     }
 
 }

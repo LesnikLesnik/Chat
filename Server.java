@@ -17,24 +17,19 @@ public class Server {
     private static Map<String, Connection> connectionMap = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
-        ServerSocket serverSocket;
-        try {
-            serverSocket = new ServerSocket(ConsoleHelper.readInt());
+        ConsoleHelper.writeMessage("Введите порт сервера:");
+        int port = ConsoleHelper.readInt();
 
-            try {
-                ConsoleHelper.writeMessage("Сервер запущен");
-                while (true) {
-                    new Handler(serverSocket.accept()).start();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                serverSocket.close();
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            ConsoleHelper.writeMessage("Чат сервер запущен.");
+            while (true) {
+                // Ожидаем входящее соединение и запускаем отдельный поток при его принятии
+                Socket socket = serverSocket.accept();
+                new Handler(socket).start();
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            ConsoleHelper.writeMessage("Произошла ошибка при запуске или работе сервера.");
         }
-
     }
 
 
