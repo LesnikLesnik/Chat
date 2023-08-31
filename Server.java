@@ -3,11 +3,16 @@ package com.javarush.task.task30.task3008;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-
 //основной класс сервера.
+/*- Сервер создает серверное сокетное соединение.
+- В цикле ожидает, когда какой-то клиент подключится к сокету.
+- Создает новый поток обработчик Handler, в котором будет происходить обмен сообщениями с клиентом.
+- Ожидает следующее соединение. */
+
 public class Server {
     private static Map<String, Connection> connectionMap = new ConcurrentHashMap<>();
 
@@ -52,8 +57,30 @@ public class Server {
 
         @Override
         public void run() {
+            String userName = null;
+            try {
+                ConsoleHelper.writeMessage("Установлено новое соединение с удаленным адресом: " + socket.getRemoteSocketAddress());
+                Connection connection = new Connection(socket);
+                userName = serverHandshake(connection); //получаем имя пользователя чтобы передавать его в другие методы
+                sendBroadcastMessage(new Message(MessageType.USER_ADDED, userName)); //отправляем всем участникам уведомление что добавлен новый пользователь
+                notifyUsers(connection, userName); //передаем список участников чата
+                serverMainLoop(connection, userName); //запускаем бесконечный цикл обработки сообщений
+            } catch (IOException | ClassNotFoundException e) {
+                ConsoleHelper.writeMessage("Произошла ошибка при обмене данными с удаленным адресом");
+            }
+            if (userName != null) { //отправляем информацию о пользователе который покинул чат
+                connectionMap.remove(userName);
+                sendBroadcastMessage(new Message(MessageType.USER_REMOVED,userName));
+            }
+            ConsoleHelper.writeMessage("Соединение с удаленным адресом закрыто");
+
         }
 
+        /*
+        правильно ли я понимаю, что когда мы прописываем throws в методе1, то мы прокидываем его дальше, обозначая что текущий метод1 при
+        получении исключения продолжает работу, отсылая его в метод2, который его вызывает, где есть try catch для отлавливания
+        исключений из вызываемого метода и обработки их в кэтч
+         */
         private String serverHandshake(Connection connection) throws IOException, ClassNotFoundException { //этап "рукопожатия", знакомство клиента с сервером
             //принимает соединение connection, возвращает имя нового клиента
             while (true) {
@@ -94,8 +121,3 @@ public class Server {
     }
 }
 
-
-/*- Сервер создает серверное сокетное соединение.
-- В цикле ожидает, когда какой-то клиент подключится к сокету.
-- Создает новый поток обработчик Handler, в котором будет происходить обмен сообщениями с клиентом.
-- Ожидает следующее соединение. */
